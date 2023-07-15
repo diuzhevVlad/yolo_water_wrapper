@@ -1,6 +1,6 @@
 import cv2
 from ultralytics import YOLO
-import yolo_water as wrpr
+import yolo_water.bounding as wrpr
 import numpy as np
 import matplotlib.pyplot as plt
 
