@@ -1,0 +1,47 @@
+import cv2
+from ultralytics import YOLO
+import torch
+import numpy as np
+import matplotlib.pyplot as plt
+
+def get_yolo_bin_mask(model, img, cls):
+    results = model.predict(source=img.copy())
+    for result in results:
+        masks = result.masks.masks
+        boxes = result.boxes.boxes
+        clss = boxes[:, 5]
+        indices = torch.where(clss == cls)
+        water_masks = masks[indices]
+        water_mask = torch.any(water_masks, dim=0).int().cpu().numpy() * 255
+        return water_mask.astype(np.uint8)
+        
+def get_yolo_contours(mask, msk_thres= (200,255), area_thres=0.005):
+    height, width = mask.shape
+    _, thresh = cv2.threshold(mask,msk_thres[0], msk_thres[1] ,0)
+    contours, _ = cv2.findContours(thresh, 1, 2)
+    new_contours = []
+    for cnt in contours:
+        if cv2.contourArea(cnt) > area_thres*height*width:
+            new_contours.append(cnt)
+
+    return new_contours
+
+if __name__ == "__main__":
+    model = YOLO("best.pt")
+    img= cv2.imread("test.jpg")
+    msk = get_yolo_bin_mask(model, img, 0)
+    cnts = get_yolo_contours(msk,area_thres=0.005)
+    blank_image = np.zeros((msk.shape[0],msk.shape[1],3), np.uint8)
+    if len(cnts) > 0:
+        for cnt in cnts:
+            prev_point = cnt[0,0,:]
+            for pt in cnt[1:,0,:]:
+                cv2.line(blank_image,prev_point, pt,(0,0,255),2)
+                prev_point = pt
+            cv2.line(blank_image,pt, cnt[0,0,:],(0,0,255),2)
+        fig, ax = plt.subplots(1,2)
+        ax[0].imshow(cv2.cvtColor(img,cv2.COLOR_BGR2RGB))
+        ax[1].imshow(cv2.cvtColor(blank_image,cv2.COLOR_BGR2RGB))
+        plt.savefig("res.png")
+    else:
+        print("No contours extracted!")
