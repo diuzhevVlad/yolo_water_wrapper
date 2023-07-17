@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 if __name__ == "__main__":
-    model = YOLO("best.pt")
+    model = YOLO('best.pt')
     img= cv2.imread("test.jpg")
     msk = wrpr.get_yolo_bin_mask(model, img, 0)
     cnts = wrpr.get_yolo_contours(msk,area_thres=0.005)
